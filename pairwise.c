@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "delay.h"
 #include "queue.h"
+#include "primitives.h"
 
 #ifndef LOGN_OPS
 #define LOGN_OPS 7
@@ -57,7 +58,10 @@ void * benchmark(int id, int nprocs) {
 }
 
 void thread_exit(int id, int nprocs) {
-  queue_free(q, hds[id]);
+  // Only free the queue from a single thread, to avoid double-free
+  static int lock = 0;
+  if (FAA(&lock, 1) == 0)
+    queue_free(q, hds[id]);
 }
 
 #ifdef VERIFY
