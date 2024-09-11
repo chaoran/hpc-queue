@@ -126,6 +126,9 @@ alloc:
         CAS(&q->tail, &rq, nrq);
         handle->next = NULL;
         return;
+      } else {
+        // Save the ring queue for future use in the thread-local handle
+        handle->next = nrq;
       }
       continue;
     }
@@ -228,6 +231,7 @@ static uint64_t lcrq_get(queue_t * q, handle_t * handle) {
 void queue_register(queue_t * q, handle_t * th, int id)
 {
   hzdptr_init(&th->hzdptr, q->nprocs, 1);
+  th->next = NULL;
 }
 
 void enqueue(queue_t * q, handle_t * th, void * val)
@@ -239,6 +243,7 @@ void * dequeue(queue_t * q, handle_t * th)
 {
   return (void *) lcrq_get(q, th);
 }
+
 //By K
 void handle_free(handle_t *h){
   hzdptr_t *hzd = &h->hzdptr;
@@ -247,7 +252,11 @@ void handle_free(handle_t *h){
     free(rlist[i]);
   }
   free(h->hzdptr.ptrs);
+  if (h->next != NULL){
+    free(h->next);
+  }
 }
+
 void queue_free(queue_t * q, handle_t * h){
   RingQueue *rq = q->head;
   while(rq){
